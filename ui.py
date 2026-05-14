@@ -72,24 +72,6 @@ class Button:
         
         rect = img.get_rect(center=(int(self.pos.x), int(self.pos.y)))
 
-        # Draw white background box on hover
-        if self.hovered:
-            # Calculate the size of the background box (2 pixels wider, 1 pixel taller)
-            # Start and Back buttons get an extra pixel on each side (total 4 wider)
-            extra_width = 4 if self.name in ["Start", "Back"] else 2
-            box_width = rect.width + extra_width
-            box_height = rect.height + 1
-            
-            # Create the white box surface with transparency support
-            bg_box = pygame.Surface((box_width, box_height), pygame.SRCALPHA)
-            # Fill with white and set 70% opacity (approx 178/255)
-            bg_box.fill((255, 255, 255, 178))
-            
-            # Position the box (offset based on extra width and 1 pixel down)
-            surface.blit(bg_box, (rect.x - (extra_width // 2), rect.y + 1))
-
-        surface.blit(img, rect)
-
         # Draw hover arrow
         if self.hovered:
             arrow_img = assets.get("arrow")
