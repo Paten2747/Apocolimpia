@@ -1,0 +1,169 @@
+import pygame
+import sys
+from constants import *
+from assets import load_all_assets, assets
+from ui import Button, Menu
+
+class Game:
+    def __init__(self):
+        pygame.init()
+        self.screen = pygame.display.set_mode(INITIAL_WINDOW_SIZE, pygame.RESIZABLE)
+        pygame.display.set_caption(WINDOW_TITLE)
+        
+        self.virtual_surface = pygame.Surface(VIRTUAL_RES)
+        self.clock = pygame.time.Clock()
+        self.running = True
+        
+        # Load assets
+        load_all_assets()
+        
+        # State
+        self.state = GameState.MAIN_MENU
+        self.next_state = None
+        self.fade_alpha = 255 # For startup fade
+        
+        self.menus = {
+            GameState.MAIN_MENU: self.create_main_menu(),
+            GameState.SETTINGS: self.create_settings_menu()
+        }
+        
+    def create_main_menu(self):
+        menu = Menu()
+        center_x = VIRTUAL_RES[0] // 2
+        
+        menu.add_button(Button(
+            "Start", 
+            (center_x, 120), 
+            assets.get("start"), 
+            assets.get("pressed_long"), 
+            lambda: print("Start Game!")
+        ))
+        
+        menu.add_button(Button(
+            "Settings", 
+            (center_x, 240), 
+            assets.get("settings"), 
+            assets.get("pressed_short"), 
+            lambda: self.change_state(GameState.SETTINGS)
+        ))
+
+        menu.add_button(Button(
+            "Back", 
+            (40, 40), 
+            assets.get("back"), 
+            assets.get("pressed_long"), 
+            lambda: self.quit_game(),
+            scale=1.0
+        ))
+        return menu
+
+    def create_settings_menu(self):
+        menu = Menu()
+        center_x = VIRTUAL_RES[0] // 2
+        
+        menu.add_button(Button(
+            "Back", 
+            (40, 40), 
+            assets.get("back"), 
+            assets.get("pressed_long"), 
+            lambda: self.change_state(GameState.MAIN_MENU),
+            scale=1.0
+        ))
+        return menu
+
+    def change_state(self, new_state):
+        self.next_state = new_state
+        self.menus[self.state].target_alpha = 0
+
+    def quit_game(self):
+        self.running = False
+
+    def handle_events(self):
+        # Scale mouse position to virtual resolution
+        mx, my = pygame.mouse.get_pos()
+        ww, wh = self.screen.get_size()
+        vw, vh = VIRTUAL_RES
+        
+        # Calculate aspect ratio scaling
+        scale = min(ww/vw, wh/vh)
+        off_x = (ww - vw * scale) / 2
+        off_y = (wh - vh * scale) / 2
+        
+        virtual_mx = (mx - off_x) / scale
+        virtual_my = (my - off_y) / scale
+        self.mouse_pos = (virtual_mx, virtual_my)
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                self.quit_game()
+            
+            if event.type == pygame.VIDEORESIZE:
+                # Handled by dynamic scaling in draw
+                pass
+                
+            self.menus[self.state].handle_event(event)
+
+    def update(self):
+        dt = self.clock.tick(FPS) / 1000.0
+        
+        current_menu = self.menus[self.state]
+        current_menu.update(dt, self.mouse_pos)
+        
+        # Handle state transitions
+        if self.next_state and current_menu.alpha <= 0:
+            self.state = self.next_state
+            self.next_state = None
+            self.menus[self.state].alpha = 0
+            self.menus[self.state].target_alpha = 255
+            
+        # Startup fade
+        if self.fade_alpha > 0:
+            self.fade_alpha = max(0, self.fade_alpha - TRANSITION_SPEED * 255 * dt)
+
+    def draw(self):
+        self.virtual_surface.fill(COLOR_BG)
+        
+        # Draw Background
+        bg = assets.get("bg")
+        if bg:
+            self.virtual_surface.blit(bg, (0, 0))
+            
+        # Draw Current Menu
+        self.menus[self.state].draw(self.virtual_surface)
+        
+        # Apply startup fade
+        if self.fade_alpha > 0:
+            fade_surf = pygame.Surface(VIRTUAL_RES)
+            fade_surf.fill(COLOR_BLACK)
+            fade_surf.set_alpha(int(self.fade_alpha))
+            self.virtual_surface.blit(fade_surf, (0, 0))
+
+        # Scale virtual surface to window size while keeping aspect ratio
+        self.screen.fill(COLOR_BLACK)
+        ww, wh = self.screen.get_size()
+        vw, vh = VIRTUAL_RES
+        scale = min(ww/vw, wh/vh)
+        dest_size = (int(vw * scale), int(vh * scale))
+        dest_pos = ((ww - dest_size[0]) // 2, (wh - dest_size[1]) // 2)
+        
+        scaled_surf = pygame.transform.scale(self.virtual_surface, dest_size)
+        self.screen.blit(scaled_surf, dest_pos)
+        
+        pygame.display.flip()
+
+    def run(self):
+        # Initial fade in
+        self.menus[self.state].alpha = 0
+        self.menus[self.state].target_alpha = 255
+        
+        while self.running:
+            self.handle_events()
+            self.update()
+            self.draw()
+            
+        pygame.quit()
+        sys.exit()
+
+if __name__ == "__main__":
+    game = Game()
+    game.run()
