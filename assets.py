@@ -48,3 +48,6 @@ def load_all_assets():
     assets.load_image("exit", "Exit.png")
     assets.load_image("back", "Back.png")
     assets.load_image("arrow", "Arrow.png")
+    assets.load_image("world", "world.png")
+    assets.load_image("plus", "plus.png")
+    assets.load_image("x", "x.png")

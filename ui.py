@@ -17,6 +17,7 @@ class Button:
         self.pressed = False
         
         # Animation states
+        self.base_scale = scale
         self.scale = scale
         self.target_scale = scale
         self.float_offset = 0.0
@@ -44,10 +45,18 @@ class Button:
         self.hovered = self.rect.collidepoint(mouse_pos)
         
         if self.hovered:
+            # Scale up on hover
+            self.target_scale = self.base_scale * 1.2
+            
             if not hasattr(self, '_prev_hovered') or not self._prev_hovered:
                 # Placeholder for hover sound
                 print(f"Hover sound: {self.name}")
+        else:
+            self.target_scale = self.base_scale 
         self._prev_hovered = self.hovered
+            
+        # Smooth scaling
+        self.scale += (self.target_scale - self.scale) * HOVER_SCALE_SPEED * dt
             
         # Floating animation
         self.float_offset = math.sin(pygame.time.get_ticks() * BUTTON_FLOAT_SPEED + self.time_offset) * BUTTON_FLOAT_AMPLITUDE
@@ -72,6 +81,8 @@ class Button:
         
         rect = img.get_rect(center=(int(self.pos.x), int(self.pos.y)))
 
+        surface.blit(img, rect)
+
         # Draw hover arrow
         if self.hovered:
             arrow_img = assets.get("arrow")
@@ -90,10 +101,24 @@ class Menu:
         self.fade_surface = pygame.Surface(VIRTUAL_RES)
         self.fade_surface.fill(COLOR_BLACK)
         
+        # Scrolling logic
+        self.scroll_y = 0
+        self.target_scroll_y = 0
+        self.scroll_speed = 10.0
+        
     def add_button(self, button):
         self.buttons.append(button)
         
     def handle_event(self, event):
+        # Handle scrolling
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if event.button == 4: # Scroll up
+                self.target_scroll_y += 30
+            elif event.button == 5: # Scroll down
+                self.target_scroll_y -= 30
+        
+        # Don't propagate events to buttons if they are scrolled off screen?
+        # For now, just propagate as usual
         for btn in self.buttons:
             btn.handle_event(event)
 
@@ -104,12 +129,33 @@ class Menu:
         elif self.alpha > self.target_alpha:
             self.alpha = max(0, self.alpha - TRANSITION_SPEED * 255 * dt)
             
+        # Smooth scrolling
+        self.scroll_y += (self.target_scroll_y - self.scroll_y) * self.scroll_speed * dt
+        
+        # Apply scroll to mouse position for button collision
+        # This is tricky because the button's internal rect isn't scrolled, 
+        # but the drawing is.
+        # We should probably shift the mouse pos in the opposite direction.
+        scrolled_mouse_pos = (mouse_pos[0], mouse_pos[1] - self.scroll_y)
+        
         for btn in self.buttons:
-            btn.update(dt, mouse_pos)
+            # We don't want to scroll fixed buttons like 'Back' or 'Plus'
+            if btn.name in ["Back", "Plus"]:
+                btn.update(dt, mouse_pos)
+            else:
+                btn.update(dt, scrolled_mouse_pos)
             
     def draw(self, surface):
         for btn in self.buttons:
-            btn.draw(surface)
+            # Shift drawing position for non-fixed buttons
+            if btn.name in ["Back", "Plus"]:
+                btn.draw(surface)
+            else:
+                # Temporarily shift base position for drawing
+                original_y = btn.pos.y
+                btn.pos.y += self.scroll_y
+                btn.draw(surface)
+                btn.pos.y = original_y
             
         # Apply menu fade overlay
         if self.alpha < 255:

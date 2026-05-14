@@ -21,4 +21,5 @@ TRANSITION_SPEED = 5.0    # Fade speed
 class GameState:
     MAIN_MENU = "main_menu"
     SETTINGS = "settings"
+    WORLD_SELECT = "world_select"
     EXIT = "exit"

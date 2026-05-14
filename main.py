@@ -1,5 +1,7 @@
 import pygame
 import sys
+import json
+import os
 from constants import *
 from assets import load_all_assets, assets
 from ui import Button, Menu
@@ -22,9 +24,12 @@ class Game:
         self.next_state = None
         self.fade_alpha = 255 # For startup fade
         
+        self.worlds = self.load_worlds()
+        
         self.menus = {
             GameState.MAIN_MENU: self.create_main_menu(),
-            GameState.SETTINGS: self.create_settings_menu()
+            GameState.SETTINGS: self.create_settings_menu(),
+            GameState.WORLD_SELECT: self.create_world_select_menu()
         }
         
     def create_main_menu(self):
@@ -36,7 +41,8 @@ class Game:
             (center_x, 120), 
             assets.get("start"), 
             assets.get("pressed_long"), 
-            lambda: print("Start Game!")
+            lambda: self.change_state(GameState.WORLD_SELECT),
+            scale=8.0
         ))
         
         menu.add_button(Button(
@@ -44,7 +50,8 @@ class Game:
             (center_x, 240), 
             assets.get("settings"), 
             assets.get("pressed_short"), 
-            lambda: self.change_state(GameState.SETTINGS)
+            lambda: self.change_state(GameState.SETTINGS),
+            scale=6.0
         ))
 
         menu.add_button(Button(
@@ -56,6 +63,87 @@ class Game:
             scale=1.0
         ))
         return menu
+
+    def create_world_select_menu(self):
+        menu = Menu()
+        center_x = VIRTUAL_RES[0] // 2
+        
+        # List existing worlds
+        for i, world_name in enumerate(self.worlds):
+            y_pos = 80 + i * 80
+            # World button
+            menu.add_button(Button(
+                world_name,
+                (center_x, y_pos),
+                assets.get("world"),
+                assets.get("pressed_long"),
+                lambda name=world_name: print(f"Selected {name}"),
+                scale=3.0
+            ))
+            
+            # Delete button (X)
+            menu.add_button(Button(
+                f"Delete_{world_name}",
+                (center_x + 180, y_pos),
+                assets.get("x"),
+                assets.get("pressed_short"),
+                lambda idx=i: self.delete_world(idx),
+                scale=2.0
+            ))
+            
+        # Back button in corner
+        menu.add_button(Button(
+            "Back", 
+            (40, 40), 
+            assets.get("back"), 
+            assets.get("pressed_long"), 
+            lambda: self.change_state(GameState.MAIN_MENU),
+            scale=1.0
+        ))
+        
+        # Plus button below Back button
+        menu.add_button(Button(
+            "Plus",
+            (40, 80),
+            assets.get("plus"),
+            assets.get("pressed_short"),
+            self.add_new_world,
+            scale=1.0
+        ))
+        
+        return menu
+
+    def add_new_world(self):
+        new_world_name = f"World {len(self.worlds) + 1}"
+        self.worlds.append(new_world_name)
+        self.save_worlds()
+        # Recreate menu to reflect changes
+        self.menus[GameState.WORLD_SELECT] = self.create_world_select_menu()
+
+    def delete_world(self, index):
+        if 0 <= index < len(self.worlds):
+            del self.worlds[index]
+            self.save_worlds()
+            # Recreate menu to reflect changes
+            self.menus[GameState.WORLD_SELECT] = self.create_world_select_menu()
+
+    def load_worlds(self):
+        try:
+            if os.path.exists("worlds.json"):
+                with open("worlds.json", "r") as f:
+                    return json.load(f)
+            else:
+                return ["Default World"]
+        except Exception as e:
+            print(f"Error loading worlds: {e}")
+            return ["Default World"]
+
+    def save_worlds(self):
+        try:
+            with open("worlds.json", "w") as f:
+                json.dump(self.worlds, f)
+        except Exception as e:
+            print(f"Error saving worlds: {e}")
 
     def create_settings_menu(self):
         menu = Menu()

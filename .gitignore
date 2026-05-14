@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+scratch/
+worlds.json
+.vscode/
+.idea/
+desktop.ini
