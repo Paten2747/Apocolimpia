@@ -5,7 +5,7 @@ from constants import COLOR_WHITE
 class AssetManager:
     def __init__(self):
         self.images = {}
-        self.base_path = os.path.dirname(__file__)
+        self.base_path = os.path.join(os.path.dirname(__file__), "assets")
         
     def load_image(self, name, filename):
         path = os.path.join(self.base_path, filename)

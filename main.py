@@ -129,8 +129,9 @@ class Game:
 
     def load_worlds(self):
         try:
-            if os.path.exists("worlds.json"):
-                with open("worlds.json", "r") as f:
+            world_path = os.path.join("assets", "worlds.json")
+            if os.path.exists(world_path):
+                with open(world_path, "r") as f:
                     return json.load(f)
             else:
                 return ["Default World"]
@@ -140,7 +141,8 @@ class Game:
 
     def save_worlds(self):
         try:
-            with open("worlds.json", "w") as f:
+            world_path = os.path.join("assets", "worlds.json")
+            with open(world_path, "w") as f:
                 json.dump(self.worlds, f)
         except Exception as e:
             print(f"Error saving worlds: {e}")
