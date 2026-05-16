@@ -248,9 +248,6 @@ class WorldView:
         self.scaled_texture_cache = {}
         self.rotated_texture_cache = {}
         self._cache_textures()
-        
-        # Back button area
-        self.back_button_rect = pygame.Rect(10, 10, 40, 40)
 
     def _cache_textures(self):
         """Pre-scale and cache all textures at startup to reduce per-frame overhead"""
@@ -358,17 +355,6 @@ class WorldView:
         # Draw player at screen center
         if self.player:
             self.player.draw(surface)
-
-        # Draw back button (top-left corner)
-        pygame.draw.rect(surface, (100, 100, 100), self.back_button_rect)
-        pygame.draw.rect(surface, (200, 200, 200), self.back_button_rect, 2)
-        # Draw X on the button
-        pygame.draw.line(surface, (200, 200, 200), 
-                        (self.back_button_rect.left + 5, self.back_button_rect.top + 5),
-                        (self.back_button_rect.right - 5, self.back_button_rect.bottom - 5), 2)
-        pygame.draw.line(surface, (200, 200, 200),
-                        (self.back_button_rect.right - 5, self.back_button_rect.top + 5),
-                        (self.back_button_rect.left + 5, self.back_button_rect.bottom - 5), 2)
 
         # Apply fade
         if self.alpha < 255:
