@@ -275,8 +275,9 @@ class WorldView:
         chunks_x = (VIRTUAL_RES[0] // chunk_pixel_width) + 2
         chunks_y = (VIRTUAL_RES[1] // chunk_pixel_height) + 2
 
-        # Return the radius needed to cover the screen plus one chunk buffer in all directions
-        return max(chunks_x, chunks_y) + 1
+        # Return the radius needed to cover the screen plus one chunk buffer, capped at 3 for performance
+        radius = max(chunks_x, chunks_y) + 1
+        return min(radius, 3)  # Cap at 3 chunks radius to prevent loading excessive chunks
 
     def handle_event(self, event):
         if self.player:
