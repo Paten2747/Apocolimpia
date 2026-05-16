@@ -4,4 +4,4 @@ scratch/
 worlds.json
 .vscode/
 .idea/
-desktop.ini
+**/desktop.ini

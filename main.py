@@ -24,7 +24,13 @@ class Game:
         self.next_state = None
         self.fade_alpha = 255 # For startup fade
         
+        # World Data Setup
+        self.world_data_path = os.path.join(os.path.dirname(__file__), "world_data")
+        if not os.path.exists(self.world_data_path):
+            os.makedirs(self.world_data_path)
+            
         self.worlds = self.load_worlds()
+        self.active_popup = None
         
         self.menus = {
             GameState.MAIN_MENU: self.create_main_menu(),
@@ -107,18 +113,36 @@ class Game:
             (40, 80),
             assets.get("plus"),
             assets.get("pressed_short"),
-            self.add_new_world,
+            self.add_new_world_prompt,
             scale=1.0
         ))
         
         return menu
 
-    def add_new_world(self):
-        new_world_name = f"World {len(self.worlds) + 1}"
-        self.worlds.append(new_world_name)
-        self.save_worlds()
-        # Recreate menu to reflect changes
-        self.menus[GameState.WORLD_SELECT] = self.create_world_select_menu()
+    def add_new_world_prompt(self):
+        from ui import TextInputPopup
+        self.active_popup = TextInputPopup("Enter World Name", self.confirm_add_world)
+
+    def confirm_add_world(self, name):
+        if name:
+            # Create world directory
+            world_dir = os.path.join(self.world_data_path, name)
+            if not os.path.exists(world_dir):
+                os.makedirs(world_dir)
+            
+            # Try to remove OS-generated desktop.ini if it appears
+            ini_path = os.path.join(world_dir, "desktop.ini")
+            if os.path.exists(ini_path):
+                try:
+                    os.remove(ini_path)
+                except:
+                    pass
+                
+            self.worlds.append(name)
+            self.save_worlds()
+            # Recreate menu to reflect changes
+            self.menus[GameState.WORLD_SELECT] = self.create_world_select_menu()
+        self.active_popup = None
 
     def delete_world(self, index):
         if 0 <= index < len(self.worlds):
@@ -191,6 +215,10 @@ class Game:
                 # Handled by dynamic scaling in draw
                 pass
                 
+            if self.active_popup:
+                if self.active_popup.handle_event(event):
+                    continue # Event consumed by popup
+                    
             self.menus[self.state].handle_event(event)
 
     def update(self):
@@ -205,6 +233,9 @@ class Game:
             self.next_state = None
             self.menus[self.state].alpha = 0
             self.menus[self.state].target_alpha = 255
+            
+        if self.active_popup:
+            self.active_popup.update(dt)
             
         # Startup fade
         if self.fade_alpha > 0:
@@ -221,6 +252,10 @@ class Game:
         # Draw Current Menu
         self.menus[self.state].draw(self.virtual_surface)
         
+        # Draw Popup
+        if self.active_popup:
+            self.active_popup.draw(self.virtual_surface)
+            
         # Apply startup fade
         if self.fade_alpha > 0:
             fade_surf = pygame.Surface(VIRTUAL_RES)

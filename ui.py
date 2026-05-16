@@ -23,6 +23,10 @@ class Button:
         self.float_offset = 0.0
         self.time_offset = pos[0] * 0.01 + pos[1] * 0.01 # Unique start phase
 
+        # Text rendering
+        self.font = pygame.font.SysFont("Arial", 16, bold=True)
+        self.text_surf = self.font.render(self.name, True, COLOR_WHITE)
+
         # Initialize rect with scaled size
         scaled_size = (int(self.idle_img.get_width() * self.scale), int(self.idle_img.get_height() * self.scale))
         self.rect = pygame.Rect(0, 0, *scaled_size)
@@ -82,6 +86,17 @@ class Button:
         rect = img.get_rect(center=(int(self.pos.x), int(self.pos.y)))
 
         surface.blit(img, rect)
+
+        # Draw text
+        if self.name and not self.name.startswith("Delete_") and self.name not in ["Back", "Plus", "Settings", "Start"]:
+            # Centered at 2/3 for world buttons
+            if self.idle_img == assets.get("world"):
+                 text_x = rect.left + rect.width * (2/3)
+            else:
+                 text_x = rect.centerx
+            
+            text_rect = self.text_surf.get_rect(center=(int(text_x), int(self.pos.y)))
+            surface.blit(self.text_surf, text_rect)
 
         # Draw hover arrow
         if self.hovered:
@@ -161,3 +176,58 @@ class Menu:
         if self.alpha < 255:
             self.fade_surface.set_alpha(255 - int(self.alpha))
             surface.blit(self.fade_surface, (0, 0))
+
+class TextInputPopup:
+    def __init__(self, title, callback):
+        self.title = title
+        self.callback = callback
+        self.text = ""
+        self.bg_img = assets.get("box")
+        self.scale = 4.0
+        
+        # Dim surface
+        self.dim_surf = pygame.Surface(VIRTUAL_RES)
+        self.dim_surf.fill(COLOR_BLACK)
+        self.dim_surf.set_alpha(150)
+        
+        self.font = pygame.font.SysFont("Arial", 14)
+        self.title_font = pygame.font.SysFont("Arial", 12, bold=True)
+        
+    def handle_event(self, event):
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_RETURN:
+                if self.text.strip():
+                    self.callback(self.text.strip())
+                return True
+            elif event.key == pygame.K_BACKSPACE:
+                self.text = self.text[:-1]
+            elif event.key == pygame.K_ESCAPE:
+                self.callback(None) # Cancel
+                return True
+            else:
+                if len(self.text) < 20 and event.unicode.isprintable():
+                    self.text += event.unicode
+        return False
+
+    def update(self, dt):
+        pass
+
+    def draw(self, surface):
+        # Draw dim background
+        surface.blit(self.dim_surf, (0, 0))
+        
+        # Draw box
+        if self.bg_img:
+            scaled_w = int(self.bg_img.get_width() * self.scale)
+            scaled_h = int(self.bg_img.get_height() * self.scale)
+            box_img = pygame.transform.scale(self.bg_img, (scaled_w, scaled_h))
+            rect = box_img.get_rect(center=(VIRTUAL_RES[0]//2, VIRTUAL_RES[1]//2))
+            surface.blit(box_img, rect)
+            
+            # Draw Title
+            title_surf = self.title_font.render(self.title, True, COLOR_WHITE)
+            surface.blit(title_surf, (rect.centerx - title_surf.get_width()//2, rect.top + 10))
+            
+            # Draw Input Text
+            text_surf = self.font.render(self.text + ("|" if pygame.time.get_ticks() % 1000 < 500 else ""), True, COLOR_WHITE)
+            surface.blit(text_surf, (rect.centerx - text_surf.get_width()//2, rect.centery))

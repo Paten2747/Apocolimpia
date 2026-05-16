@@ -51,3 +51,4 @@ def load_all_assets():
     assets.load_image("world", "world.png")
     assets.load_image("plus", "plus.png")
     assets.load_image("x", "x.png")
+    assets.load_image("box", "box.png")
