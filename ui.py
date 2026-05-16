@@ -1,5 +1,6 @@
 import pygame
 import math
+import hashlib
 from constants import *
 from assets import assets
 
@@ -231,3 +232,108 @@ class TextInputPopup:
             # Draw Input Text
             text_surf = self.font.render(self.text + ("|" if pygame.time.get_ticks() % 1000 < 500 else ""), True, COLOR_WHITE)
             surface.blit(text_surf, (rect.centerx - text_surf.get_width()//2, rect.centery))
+
+class WorldView:
+    def __init__(self, infinite_world, block_registry, player):
+        self.infinite_world = infinite_world
+        self.block_registry = block_registry
+        self.player = player
+        self.tile_size = 16  # 16 pixels per block
+        self.fade_surface = pygame.Surface(VIRTUAL_RES)
+        self.fade_surface.fill(COLOR_BLACK)
+        self.alpha = 0
+        self.target_alpha = 255
+
+    def calculate_view_radius(self):
+        """Calculate how many chunks to load based on screen size"""
+        from constants import CHUNK_SIZE
+        # Calculate pixels per chunk
+        chunk_pixel_width = CHUNK_SIZE * self.tile_size
+        chunk_pixel_height = CHUNK_SIZE * self.tile_size
+
+        # How many chunks fit on screen (plus 1 for safety margin)
+        chunks_x = (VIRTUAL_RES[0] // chunk_pixel_width) + 2
+        chunks_y = (VIRTUAL_RES[1] // chunk_pixel_height) + 2
+
+        # Return the radius needed to cover the screen
+        return max(chunks_x, chunks_y)
+
+    def handle_event(self, event):
+        if self.player:
+            self.player.handle_event(event)
+
+    def update(self, dt, mouse_pos):
+        if self.player:
+            self.player.update(dt)
+
+        if self.alpha < self.target_alpha:
+            self.alpha = min(255, self.alpha + TRANSITION_SPEED * 255 * dt)
+        elif self.alpha > self.target_alpha:
+            self.alpha = max(0, self.alpha - TRANSITION_SPEED * 255 * dt)
+
+    def _get_block_rotation(self, block_id, world_x, world_y):
+        root_seed = getattr(self.infinite_world, 'seed', 0)
+        hash_input = f"{root_seed}:{block_id}:{world_x}:{world_y}"
+        hash_obj = hashlib.md5(hash_input.encode())
+        rotation_index = int(hash_obj.hexdigest(), 16) % 4
+        return rotation_index * 90
+
+    def draw(self, surface):
+        surface.fill(COLOR_BG)
+
+        if not self.infinite_world or not self.block_registry or not self.player:
+            return
+
+        # Calculate dynamic view radius based on screen size
+        from constants import CHUNK_SIZE
+        view_radius = self.calculate_view_radius()
+
+        # Get visible chunks around player
+        visible_chunks = self.infinite_world.get_visible_chunks(
+            self.player.world_x, self.player.world_y, view_radius
+        )
+
+        # Calculate camera offset so player is at center
+        screen_center_x = VIRTUAL_RES[0] // 2
+        screen_center_y = VIRTUAL_RES[1] // 2
+        camera_offset_x = screen_center_x - (self.player.world_x * self.tile_size)
+        camera_offset_y = screen_center_y - (self.player.world_y * self.tile_size)
+
+        # Draw chunks
+        for chunk in visible_chunks:
+            for local_y in range(CHUNK_SIZE):
+                for local_x in range(CHUNK_SIZE):
+                    block_id = chunk.grid[local_y][local_x]
+                    texture = self.block_registry.get_texture(block_id)
+
+                    if texture:
+                        scaled_texture = pygame.transform.scale(texture, (self.tile_size, self.tile_size))
+                    else:
+                        scaled_texture = pygame.Surface((self.tile_size, self.tile_size))
+                        scaled_texture.fill((100, 100, 100))
+
+                    # Convert chunk-local coords to world coords
+                    world_x = chunk.chunk_x * CHUNK_SIZE + local_x
+                    world_y = chunk.chunk_y * CHUNK_SIZE + local_y
+
+                    # Apply deterministic random orientation per block position
+                    rotation = self._get_block_rotation(block_id, world_x, world_y)
+                    if rotation != 0:
+                        scaled_texture = pygame.transform.rotate(scaled_texture, rotation)
+
+                    # Convert to screen coords
+                    screen_x = world_x * self.tile_size + camera_offset_x
+                    screen_y = world_y * self.tile_size + camera_offset_y
+
+                    # Only draw if visible
+                    if -self.tile_size < screen_x < VIRTUAL_RES[0] and -self.tile_size < screen_y < VIRTUAL_RES[1]:
+                        surface.blit(scaled_texture, (int(screen_x), int(screen_y)))
+
+        # Draw player at screen center
+        if self.player:
+            self.player.draw(surface)
+
+        # Apply fade
+        if self.alpha < 255:
+            self.fade_surface.set_alpha(255 - int(self.alpha))
+            surface.blit(self.fade_surface, (0, 0))

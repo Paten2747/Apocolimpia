@@ -17,9 +17,16 @@ BUTTON_FLOAT_SPEED = 0.003
 HOVER_SCALE_SPEED = 15.0  # Lerp speed
 TRANSITION_SPEED = 5.0    # Fade speed
 
+# World Constants
+CHUNK_SIZE = 8            # 8x8 blocks per chunk
+PLAYER_SPEED = 1          # blocks per frame
+VIEW_RADIUS = 2           # 2-chunk radius (5x5 chunks visible)
+BLOCK_PIXEL_SIZE = 16     # 16x16 pixels per block on screen
+
 # Menu States
 class GameState:
     MAIN_MENU = "main_menu"
     SETTINGS = "settings"
     WORLD_SELECT = "world_select"
+    WORLD_EDITOR = "world_editor"
     EXIT = "exit"

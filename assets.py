@@ -43,7 +43,7 @@ def load_all_assets():
     assets.load_image("pressed_short", "Pressed short button.png")
     assets.load_image("start", "Start.png")
     assets.load_image("settings", "Settings.png")
-    
+
     # Missing assets - will create placeholders
     assets.load_image("exit", "Exit.png")
     assets.load_image("back", "Back.png")
@@ -52,3 +52,11 @@ def load_all_assets():
     assets.load_image("plus", "plus.png")
     assets.load_image("x", "x.png")
     assets.load_image("box", "box.png")
+
+    # Load block textures
+    assets.load_image("block_grass", "blocks/grass.png")
+    assets.load_image("block_dirt", "blocks/dirt.png")
+    assets.load_image("block_stone", "blocks/stone.png")
+    assets.load_image("block_log", "blocks/log.png")
+    assets.load_image("block_plank", "blocks/plank.png")
+    assets.load_image("block_grass_side", "blocks/grass_side.png")

@@ -1,0 +1,52 @@
+{
+  "blocks": {
+    "grass": {
+      "id": "grass",
+      "name": "Grass",
+      "texture": "grass.png",
+      "properties": {
+        "walkable": true
+      }
+    },
+    "dirt": {
+      "id": "dirt",
+      "name": "Dirt",
+      "texture": "dirt.png",
+      "properties": {
+        "walkable": true
+      }
+    },
+    "stone": {
+      "id": "stone",
+      "name": "Stone",
+      "texture": "stone.png",
+      "properties": {
+        "walkable": true
+      }
+    },
+    "log": {
+      "id": "log",
+      "name": "Log",
+      "texture": "log.png",
+      "properties": {
+        "walkable": true
+      }
+    },
+    "plank": {
+      "id": "plank",
+      "name": "Plank",
+      "texture": "plank.png",
+      "properties": {
+        "walkable": true
+      }
+    },
+    "grass_side": {
+      "id": "grass_side",
+      "name": "Grass Side",
+      "texture": "grass_side.png",
+      "properties": {
+        "walkable": true
+      }
+    }
+  }
+}
