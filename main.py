@@ -161,6 +161,9 @@ class Game:
             spawn_chunk_y = int(spawn_y // 8)
             self.current_infinite_world.pregenerate_chunks(spawn_chunk_x, spawn_chunk_y, radius=5)
             
+            # Save all pregenerated chunks to disk
+            self.current_infinite_world.save_all_chunks()
+            
             self.menus[GameState.WORLD_EDITOR] = self.create_world_editor()
             self.change_state(GameState.WORLD_EDITOR)
         else:
