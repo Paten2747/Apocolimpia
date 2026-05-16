@@ -243,20 +243,40 @@ class WorldView:
         self.fade_surface.fill(COLOR_BLACK)
         self.alpha = 0
         self.target_alpha = 255
+        
+        # Texture cache for pre-scaled textures to reduce per-frame computation
+        self.scaled_texture_cache = {}
+        self.rotated_texture_cache = {}
+        self._cache_textures()
+
+    def _cache_textures(self):
+        """Pre-scale and cache all textures at startup to reduce per-frame overhead"""
+        for block_id, texture in self.block_registry.block_textures.items():
+            if texture:
+                scaled = pygame.transform.scale(texture, (self.tile_size, self.tile_size))
+                self.scaled_texture_cache[block_id] = scaled
+    
+    def _get_cached_texture(self, block_id: str):
+        """Get pre-scaled texture from cache"""
+        if block_id in self.scaled_texture_cache:
+            return self.scaled_texture_cache[block_id]
+        placeholder = pygame.Surface((self.tile_size, self.tile_size))
+        placeholder.fill((100, 100, 100))
+        return placeholder
 
     def calculate_view_radius(self):
-        """Calculate how many chunks to load based on screen size"""
+        """Calculate how many chunks to load based on screen size with 1 chunk ahead"""
         from constants import CHUNK_SIZE
         # Calculate pixels per chunk
         chunk_pixel_width = CHUNK_SIZE * self.tile_size
         chunk_pixel_height = CHUNK_SIZE * self.tile_size
 
-        # How many chunks fit on screen (plus 1 for safety margin)
+        # How many chunks fit on screen (plus 2 for safety margin, plus 1 for one chunk ahead)
         chunks_x = (VIRTUAL_RES[0] // chunk_pixel_width) + 2
         chunks_y = (VIRTUAL_RES[1] // chunk_pixel_height) + 2
 
-        # Return the radius needed to cover the screen
-        return max(chunks_x, chunks_y)
+        # Return the radius needed to cover the screen plus one chunk buffer in all directions
+        return max(chunks_x, chunks_y) + 1
 
     def handle_event(self, event):
         if self.player:
@@ -299,35 +319,37 @@ class WorldView:
         camera_offset_x = screen_center_x - (self.player.world_x * self.tile_size)
         camera_offset_y = screen_center_y - (self.player.world_y * self.tile_size)
 
-        # Draw chunks
+        # Draw chunks with optimizations for low-end hardware
         for chunk in visible_chunks:
             for local_y in range(CHUNK_SIZE):
                 for local_x in range(CHUNK_SIZE):
                     block_id = chunk.grid[local_y][local_x]
-                    texture = self.block_registry.get_texture(block_id)
-
-                    if texture:
-                        scaled_texture = pygame.transform.scale(texture, (self.tile_size, self.tile_size))
-                    else:
-                        scaled_texture = pygame.Surface((self.tile_size, self.tile_size))
-                        scaled_texture.fill((100, 100, 100))
-
+                    
                     # Convert chunk-local coords to world coords
                     world_x = chunk.chunk_x * CHUNK_SIZE + local_x
                     world_y = chunk.chunk_y * CHUNK_SIZE + local_y
-
-                    # Apply deterministic random orientation per block position
-                    rotation = self._get_block_rotation(block_id, world_x, world_y)
-                    if rotation != 0:
-                        scaled_texture = pygame.transform.rotate(scaled_texture, rotation)
 
                     # Convert to screen coords
                     screen_x = world_x * self.tile_size + camera_offset_x
                     screen_y = world_y * self.tile_size + camera_offset_y
 
-                    # Only draw if visible
-                    if -self.tile_size < screen_x < VIRTUAL_RES[0] and -self.tile_size < screen_y < VIRTUAL_RES[1]:
-                        surface.blit(scaled_texture, (int(screen_x), int(screen_y)))
+                    # Early cull: skip if block is completely off-screen
+                    if not (-self.tile_size < screen_x < VIRTUAL_RES[0] and -self.tile_size < screen_y < VIRTUAL_RES[1]):
+                        continue
+                    
+                    # Get pre-scaled cached texture (no per-frame scaling)
+                    scaled_texture = self._get_cached_texture(block_id)
+
+                    # Apply deterministic random orientation per block position
+                    rotation = self._get_block_rotation(block_id, world_x, world_y)
+                    if rotation != 0:
+                        # Cache rotated textures to avoid recalculating
+                        cache_key = (block_id, rotation)
+                        if cache_key not in self.rotated_texture_cache:
+                            self.rotated_texture_cache[cache_key] = pygame.transform.rotate(scaled_texture, rotation)
+                        scaled_texture = self.rotated_texture_cache[cache_key]
+
+                    surface.blit(scaled_texture, (int(screen_x), int(screen_y)))
 
         # Draw player at screen center
         if self.player:
