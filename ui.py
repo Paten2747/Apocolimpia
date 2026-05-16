@@ -316,8 +316,9 @@ class WorldView:
         # Calculate camera offset so player is at center
         screen_center_x = VIRTUAL_RES[0] // 2
         screen_center_y = VIRTUAL_RES[1] // 2
-        camera_offset_x = screen_center_x - (self.player.world_x * self.tile_size)
-        camera_offset_y = screen_center_y - (self.player.world_y * self.tile_size)
+        # Use round() for pixel-perfect positioning to prevent jitter
+        camera_offset_x = screen_center_x - int(round(self.player.world_x * self.tile_size))
+        camera_offset_y = screen_center_y - int(round(self.player.world_y * self.tile_size))
 
         # Draw chunks with optimizations for low-end hardware
         for chunk in visible_chunks:
@@ -329,9 +330,9 @@ class WorldView:
                     world_x = chunk.chunk_x * CHUNK_SIZE + local_x
                     world_y = chunk.chunk_y * CHUNK_SIZE + local_y
 
-                    # Convert to screen coords
-                    screen_x = world_x * self.tile_size + camera_offset_x
-                    screen_y = world_y * self.tile_size + camera_offset_y
+                    # Convert to screen coords with pixel-perfect rounding
+                    screen_x = int(round(world_x * self.tile_size + camera_offset_x))
+                    screen_y = int(round(world_y * self.tile_size + camera_offset_y))
 
                     # Early cull: skip if block is completely off-screen
                     if not (-self.tile_size < screen_x < VIRTUAL_RES[0] and -self.tile_size < screen_y < VIRTUAL_RES[1]):
@@ -349,7 +350,7 @@ class WorldView:
                             self.rotated_texture_cache[cache_key] = pygame.transform.rotate(scaled_texture, rotation)
                         scaled_texture = self.rotated_texture_cache[cache_key]
 
-                    surface.blit(scaled_texture, (int(screen_x), int(screen_y)))
+                    surface.blit(scaled_texture, (screen_x, screen_y))
 
         # Draw player at screen center
         if self.player:
