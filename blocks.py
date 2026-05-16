@@ -265,3 +265,13 @@ class InfiniteWorld:
         """Save all loaded chunks to disk"""
         for chunk_x, chunk_y in self.chunks.keys():
             self.save_chunk(chunk_x, chunk_y)
+
+    def pregenerate_chunks(self, center_x: int, center_y: int, radius: int):
+        """Pregenerate chunks in a radius around a center point"""
+        print(f"Pregenerating {(radius*2+1)**2} chunks in radius {radius} around ({center_x}, {center_y})...")
+        pregenerated_count = 0
+        for cx in range(center_x - radius, center_x + radius + 1):
+            for cy in range(center_y - radius, center_y + radius + 1):
+                self.load_or_generate_chunk(cx, cy)
+                pregenerated_count += 1
+        print(f"Pregeneration complete: {pregenerated_count} chunks generated")
