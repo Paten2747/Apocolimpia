@@ -2,6 +2,7 @@ import pygame
 import sys
 import json
 import os
+import shutil
 from constants import *
 from assets import load_all_assets, assets
 from ui import Button, Menu
@@ -146,6 +147,16 @@ class Game:
 
     def delete_world(self, index):
         if 0 <= index < len(self.worlds):
+            world_name = self.worlds[index]
+            # Delete directory
+            world_dir = os.path.join(self.world_data_path, world_name)
+            if os.path.exists(world_dir):
+                try:
+                    shutil.rmtree(world_dir)
+                    print(f"Deleted world data: {world_dir}")
+                except Exception as e:
+                    print(f"Error deleting world data: {e}")
+
             del self.worlds[index]
             self.save_worlds()
             # Recreate menu to reflect changes
